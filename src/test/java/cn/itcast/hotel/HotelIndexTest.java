@@ -2,8 +2,12 @@ package cn.itcast.hotel;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
+import co.elastic.clients.elasticsearch.cat.IndicesResponse;
+import co.elastic.clients.elasticsearch.cat.indices.IndicesRecord;
 import co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
 import co.elastic.clients.elasticsearch.indices.DeleteIndexResponse;
+import co.elastic.clients.elasticsearch.indices.GetIndexResponse;
+import co.elastic.clients.elasticsearch.indices.IndexState;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.endpoints.BooleanResponse;
@@ -17,12 +21,15 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
 @Slf4j
 public class HotelIndexTest {
 
+    private RestClient restClient;
+    private ElasticsearchTransport transport;
     private ElasticsearchClient client;
 
 
@@ -110,10 +117,28 @@ public class HotelIndexTest {
         System.out.println(response);
     }
 
+    //查看索引是否存在
     @Test
     void testExistsIndex() throws IOException {
         BooleanResponse response = client.indices().exists(c -> c.index("hotel"));
         System.out.println(response.value());
+    }
+
+    //查看索引
+    @Test
+    void testGetIndex() throws IOException {
+        GetIndexResponse response = client.indices().get(c -> c.index("hotel"));
+        Map<String, IndexState> result = response.result();
+        result.forEach((k, v) -> System.err.println("key = " + k + ", value = " + v ));
+    }
+
+    //查看所有索引
+
+    @Test
+    void testGetAllIndex() throws IOException {
+        IndicesResponse response = client.cat().indices();
+        List<IndicesRecord> list = response.valueBody();
+        list.forEach(System.out::println);
     }
 
     @Test
@@ -124,17 +149,18 @@ public class HotelIndexTest {
 
     @BeforeEach
     void setUp() {
-        RestClient restClient = RestClient.builder(
+        restClient = RestClient.builder(
                 new HttpHost("localhost", 9200)).build();
         // Create the transport with a Jackson mapper
-        ElasticsearchTransport transport = new RestClientTransport(
+        transport = new RestClientTransport(
                 restClient, new JacksonJsonpMapper());
         // And create the API client
         client = new ElasticsearchClient(transport);
     }
 
     @AfterEach
-    void tearDown() {
-        this.client.shutdown();
+    void tearDown() throws IOException {
+        transport.close();
+        restClient.close();
     }
 }
