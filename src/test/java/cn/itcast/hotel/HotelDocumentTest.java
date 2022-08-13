@@ -6,6 +6,7 @@ import cn.itcast.hotel.service.IHotelService;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
@@ -18,6 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @SpringBootTest
 public class HotelDocumentTest {
@@ -89,6 +93,22 @@ public class HotelDocumentTest {
     @Test
     void testDeleteById() throws IOException {
         DeleteResponse response = client.delete(req -> req.index("hotel").id("60398"));
+        System.out.println(response);
+    }
+
+
+    // 批量导入文档到es
+    @Test
+    void testBulk() throws IOException {
+        List<Hotel> hotelList = hotelService.list();
+        List<BulkOperation> list = hotelList.stream().map(hotel -> {
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+
+
+            return new BulkOperation.Builder().create(createOperation -> createOperation.id(hotel.getId().toString()).document(hotelDoc)).build();
+        }).collect(Collectors.toList());
+
+        BulkResponse response = client.bulk(req -> req.index("hotel").operations(list));
         System.out.println(response);
     }
 
