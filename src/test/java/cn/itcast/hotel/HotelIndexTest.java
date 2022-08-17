@@ -97,7 +97,7 @@ public class HotelIndexTest {
                 objectBuilder.copyTo("all"))));
         map.put("city", Property.of(property -> property.keyword(objectBuilder ->
                 objectBuilder.copyTo("all"))));
-        map.put("startName", Property.of(property -> property.keyword(objectBuilder ->
+        map.put("starName", Property.of(property -> property.keyword(objectBuilder ->
                 objectBuilder)));
         map.put("business", Property.of(property -> property.keyword(objectBuilder ->
                 objectBuilder)));
@@ -113,7 +113,7 @@ public class HotelIndexTest {
     // 删除索引
     @Test
     void testDeleteIndex() throws IOException {
-        DeleteIndexResponse response = client.indices().delete(c -> c.index("hotel"));
+        DeleteIndexResponse response = client.indices().delete(c -> c.index("test1"));
         System.out.println(response);
     }
 

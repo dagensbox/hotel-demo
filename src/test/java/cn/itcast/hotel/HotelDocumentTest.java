@@ -103,8 +103,6 @@ public class HotelDocumentTest {
         List<Hotel> hotelList = hotelService.list();
         List<BulkOperation> list = hotelList.stream().map(hotel -> {
             HotelDoc hotelDoc = new HotelDoc(hotel);
-
-
             return new BulkOperation.Builder().create(createOperation -> createOperation.id(hotel.getId().toString()).document(hotelDoc)).build();
         }).collect(Collectors.toList());
 
