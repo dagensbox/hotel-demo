@@ -10,6 +10,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.DistanceUnit;
 import co.elastic.clients.elasticsearch._types.GeoLocation;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -23,7 +26,9 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -62,13 +67,55 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         }
     }
 
+    @Override
+    public Map<String, List<String>> filters(RequestParams requestParams) {
+        try {
+            // 1.0 构造聚合函数map
+            Map<String, Aggregation> aggregationMap = getAggregationMap();
+            // 2、开始查询
+            SearchResponse<HotelDoc> search = client.search(builder -> builder.query(getQuery(requestParams)).size(0).aggregations(aggregationMap), HotelDoc.class);
+            // 3、封装返回结果
+            return getStringListMap(search);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Map<String, List<String>> getStringListMap(SearchResponse<HotelDoc> search) {
+        Map<String, List<String>> result = new HashMap<>(16);
+        for (Map.Entry<String, Aggregate> stringAggregateEntry : search.aggregations().entrySet()) {
+            String key = stringAggregateEntry.getKey();
+            Aggregate value = stringAggregateEntry.getValue();
+            List<String> list = new ArrayList<>();
+            for (StringTermsBucket bucket : value.sterms().buckets().array()) {
+                list.add(bucket.key());
+            }
+            result.put(key.substring(0, key.indexOf("Agg")), list);
+        }
+        return result;
+    }
+
+    private static Map<String, Aggregation> getAggregationMap() {
+        Map<String, Aggregation> aggregationMap = new HashMap<>(8);
+        // 1.1 添加品牌
+        Aggregation brandAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("brand").size(100)));
+        aggregationMap.put("brandAgg", brandAgg);
+        // 1.2 添加城市
+        Aggregation cityAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("city").size(100)));
+        aggregationMap.put("cityAgg", brandAgg);
+        // 1.3 添加星级
+        Aggregation startNameAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("startName").size(100)));
+        aggregationMap.put("startNameAgg", brandAgg);
+        return aggregationMap;
+    }
+
     private static PageResult getPageResult(SearchResponse<HotelDoc> searchResponse) {
         HitsMetadata<HotelDoc> metadata = searchResponse.hits();
         long total = metadata.total().value();
         List<HotelDoc> docList = metadata.hits().stream().map(hotelDocHit -> {
             HotelDoc source = hotelDocHit.source();
             List<String> sort = hotelDocHit.sort();
-            if (sort != null && sort.size()>0){
+            if (sort != null && sort.size() > 0) {
                 String sortValues = sort.get(0);
                 source.setDistance(Double.valueOf(sortValues));
             }

@@ -6,6 +6,10 @@ import cn.itcast.hotel.service.IHotelService;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.AggregateVariant;
+import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -43,6 +47,19 @@ public class HotelSearchTest {
     private ElasticsearchClient client;
 
     @Test
+    void testAggregation() throws IOException {
+        SearchResponse<HotelDoc> searchResponse = client.search(builder ->
+                        builder.size(0).aggregations("brandAgg", builder1 ->
+                                builder1.terms(builder2 -> builder2.field("brand").size(20)))
+                , HotelDoc.class);
+        System.out.println(searchResponse);
+        Buckets<StringTermsBucket> buckets = searchResponse.aggregations().get("brandAgg").sterms().buckets();
+        for (StringTermsBucket bucket : buckets.array()) {
+            System.out.println(bucket.key());
+        }
+    }
+
+    @Test
     void testMatchAll() throws IOException {
         SearchResponse<HotelDoc> searchResponse = client.search(req -> req.index("hotel").query(q -> q.matchAll(builder -> builder)), HotelDoc.class);
         // 解析响应
@@ -72,7 +89,7 @@ public class HotelSearchTest {
         int page = 2, size = 10;
         SearchRequest searchRequest = SearchRequest.of(builder -> builder.index("hotel").query(q -> q.matchAll(builder1 -> builder1))
                 .sort(builder1 -> builder1.field(builder2 -> builder2.field("price").order(SortOrder.Asc)))
-                .from((page-1)*size).size(size));
+                .from((page - 1) * size).size(size));
         SearchResponse<HotelDoc> searchResponse = client.search(searchRequest, HotelDoc.class);
         // 解析响应
         handlerResponse(searchResponse);
@@ -81,7 +98,7 @@ public class HotelSearchTest {
     @Test
     void testHighlight() throws IOException {
         Query query = Query.of(builder -> builder.match(builder1 -> builder1.field("all").query("如家")));
-        Highlight highlight = Highlight.of(builder -> builder.fields("name",builder1 -> builder1.requireFieldMatch(false)));
+        Highlight highlight = Highlight.of(builder -> builder.fields("name", builder1 -> builder1.requireFieldMatch(false)));
         SearchRequest searchRequest = SearchRequest.of(builder -> builder.index("hotel").query(query).highlight(highlight));
         SearchResponse<HotelDoc> searchResponse = client.search(searchRequest, HotelDoc.class);
         // 解析响应
@@ -101,7 +118,7 @@ public class HotelSearchTest {
             HotelDoc source = hit.source();
             //获取高粱结果
             Map<String, List<String>> listMap = hit.highlight();
-            if (!CollectionUtils.isEmpty(listMap)){
+            if (!CollectionUtils.isEmpty(listMap)) {
                 String name = listMap.get("name").get(0);
                 source.setName(name);
             }
