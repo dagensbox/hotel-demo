@@ -102,10 +102,10 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         aggregationMap.put("brandAgg", brandAgg);
         // 1.2 添加城市
         Aggregation cityAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("city").size(100)));
-        aggregationMap.put("cityAgg", brandAgg);
+        aggregationMap.put("cityAgg", cityAgg);
         // 1.3 添加星级
-        Aggregation startNameAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("startName").size(100)));
-        aggregationMap.put("startNameAgg", brandAgg);
+        Aggregation starNameAgg = Aggregation.of(builder -> builder.terms(builder1 -> builder1.field("starName").size(100)));
+        aggregationMap.put("starNameAgg", starNameAgg);
         return aggregationMap;
     }
 
