@@ -15,9 +15,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
-import co.elastic.clients.elasticsearch.core.search.Highlight;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
+import co.elastic.clients.elasticsearch.core.search.*;
 import co.elastic.clients.json.JsonData;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
@@ -45,6 +43,20 @@ public class HotelSearchTest {
     private RestClient restClient;
     private ElasticsearchTransport transport;
     private ElasticsearchClient client;
+
+    @Test
+    void testSuggest() throws IOException {
+        SearchResponse<HotelDoc> response = client.search(builder ->
+                builder.index("hotel").suggest(builder1 -> builder1.
+                        suggesters("mySuggestion", builder2 -> builder2.text("h").completion(builder3 ->
+                                builder3.field("suggestion").skipDuplicates(true).size(10)))), HotelDoc.class);
+        //2、解析结果
+        List<Suggestion<HotelDoc>> mySuggestion = response.suggest().get("mySuggestion");
+        List<CompletionSuggestOption<HotelDoc>> options = mySuggestion.get(0).completion().options();
+        for (CompletionSuggestOption<HotelDoc> option : options) {
+            System.out.println(option.text());
+        }
+    }
 
     @Test
     void testAggregation() throws IOException {

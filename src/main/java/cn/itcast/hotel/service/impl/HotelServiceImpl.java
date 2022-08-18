@@ -17,6 +17,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.json.JsonData;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -76,6 +77,29 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
             SearchResponse<HotelDoc> search = client.search(builder -> builder.query(getQuery(requestParams)).size(0).aggregations(aggregationMap), HotelDoc.class);
             // 3、封装返回结果
             return getStringListMap(search);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<String> suggestion(String text) {
+        try {
+            //1、查询
+            SearchResponse<HotelDoc> response = client.search(builder -> builder
+                            .index("hotel")
+                            .suggest(builder1 -> builder1.text(text)
+                                    .suggesters("mySuggestion", builder2 -> builder2.completion(builder3 ->
+                                            builder3.field("suggestion").skipDuplicates(true).size(10))))
+                    , HotelDoc.class);
+            //2、解析结果
+            List<CompletionSuggestOption<HotelDoc>> options = response.suggest().get("mySuggestion").get(0).completion().options();
+            List<String> list = new ArrayList<>();
+            for (CompletionSuggestOption<HotelDoc> option : options) {
+                String text1 = option.text();
+                list.add(text1);
+            }
+            return list;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
