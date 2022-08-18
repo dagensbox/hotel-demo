@@ -16,7 +16,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.json.JsonData;
@@ -102,6 +102,29 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
             return list;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void insertById(Long id) {
+        try {
+            //0、根据id查询酒店数据
+            Hotel hotel = getById(id);
+            // 转换为文档类型
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+            //操作
+            client.index(builder -> builder.index("hotel").id(id.toString()).document(hotelDoc));
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        try {
+            DeleteResponse response = client.delete(builder -> builder.index("hotel").id(id.toString()));
+        } catch (Exception e) {
+            System.out.println(e);
         }
     }
 
